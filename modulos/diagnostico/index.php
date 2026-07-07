@@ -96,7 +96,7 @@ if (!isset($_SESSION['codigo'])) {
 
                         <div class="d-flex justify-content-between gap-2">
 
-                            <a href="../../index.php" class="btn btn-outline-secondary">
+                            <a href="/scripts/index.php" class="btn btn-outline-secondary">
                                 Volver
                             </a>
 
