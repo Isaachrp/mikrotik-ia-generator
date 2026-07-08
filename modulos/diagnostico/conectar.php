@@ -39,18 +39,48 @@ if (!$conectado) {
     exit;
 }
 
-$identidad = $API->comm('/system/identity/print');
-$recurso = $API->comm('/system/resource/print');
+function consultarRouter($API, $comando)
+{
+    $respuesta = $API->comm($comando);
+
+    return is_array($respuesta) ? $respuesta : [];
+}
+
+$identidad = consultarRouter($API, '/system/identity/print');
+$recurso = consultarRouter($API, '/system/resource/print');
+$interfaces = consultarRouter($API, '/interface/print');
+$direcciones = consultarRouter($API, '/ip/address/print');
+$rutas = consultarRouter($API, '/ip/route/print');
+$firewall = consultarRouter($API, '/ip/firewall/filter/print');
+$nat = consultarRouter($API, '/ip/firewall/nat/print');
+$dhcp = consultarRouter($API, '/ip/dhcp-server/print');
+$dhcpRedes = consultarRouter($API, '/ip/dhcp-server/network/print');
+$pools = consultarRouter($API, '/ip/pool/print');
+$hotspot = consultarRouter($API, '/ip/hotspot/print');
+$hotspotPerfiles = consultarRouter($API, '/ip/hotspot/profile/print');
+$hotspotUsuarios = consultarRouter($API, '/ip/hotspot/user/print');
+$colasSimples = consultarRouter($API, '/queue/simple/print');
 
 $API->disconnect();
 
 $_SESSION['diagnostico_router'] = [
     'ip' => $ip,
     'usuario' => $usuario,
-    'password' => $password,
     'puerto' => $puerto,
     'identidad' => $identidad,
     'recurso' => $recurso,
+    'interfaces' => $interfaces,
+    'direcciones' => $direcciones,
+    'rutas' => $rutas,
+    'firewall' => $firewall,
+    'nat' => $nat,
+    'dhcp' => $dhcp,
+    'dhcp_redes' => $dhcpRedes,
+    'pools' => $pools,
+    'hotspot' => $hotspot,
+    'hotspot_perfiles' => $hotspotPerfiles,
+    'hotspot_usuarios' => $hotspotUsuarios,
+    'colas_simples' => $colasSimples,
 ];
 
 header('Location: leer_router.php');

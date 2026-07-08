@@ -544,3 +544,114 @@ Ejemplo ECMPr:
 
     return trim($json['choices'][0]['message']['content']);
 }
+
+function consultarPropuestaRouterIA($contextoRouter, $solicitud)
+{
+    $apiKey = envIA('OPENROUTER_API_KEY');
+
+    $url = envIA('OPENROUTER_API_URL', 'https://openrouter.ai/api/v1/chat/completions');
+
+    $modelo = envIA('OPENROUTER_MODEL', 'openrouter/free');
+
+    $referer = envIA('OPENROUTER_HTTP_REFERER', 'http://localhost');
+
+    $titulo = envIA('OPENROUTER_X_TITLE', 'MikroTik IA');
+
+    if ($apiKey === '') {
+        return json_encode([
+            "error" => "No se encontro OPENROUTER_API_KEY en modulos/ia/.env"
+        ]);
+    }
+
+    $system = '
+Eres un experto en MikroTik, RouterOS y redes WISP.
+
+Tu tarea es analizar el estado real de un router MikroTik y proponer una configuracion o script segun la solicitud del usuario.
+
+REGLAS OBLIGATORIAS:
+
+- No ejecutes nada.
+- No digas que ya aplicaste cambios.
+- No inventes datos que no esten en el contexto.
+- Si falta informacion, indicalo en advertencias o supuestos.
+- Toma en cuenta interfaces, IPs, rutas, firewall, NAT, DHCP, Hotspot y colas existentes.
+- Evita proponer reglas duplicadas si el contexto muestra algo parecido.
+- La salida debe ser SOLO JSON valido.
+- No uses markdown.
+- No uses bloques ```json.
+
+FORMATO OBLIGATORIO:
+
+{
+  "resumen":"explicacion breve de la propuesta",
+  "tipo_accion":"categoria de la accion",
+  "hallazgos":["dato relevante encontrado en el router"],
+  "supuestos":["supuesto usado si falto informacion"],
+  "advertencias":["riesgo o punto a revisar antes de aplicar"],
+  "script":"script RouterOS propuesto, solo comandos, sin markdown",
+  "pasos_validacion":["paso para revisar antes o despues de aplicar"]
+}
+
+Si no es seguro proponer script, deja "script" como cadena vacia y explica la razon en advertencias.
+';
+
+    $mensaje = "CONTEXTO DEL ROUTER:\n"
+        . $contextoRouter
+        . "\n\nSOLICITUD DEL USUARIO:\n"
+        . $solicitud;
+
+    $data = [
+        "model" => $modelo,
+        "messages" => [
+            [
+                "role" => "system",
+                "content" => $system
+            ],
+            [
+                "role" => "user",
+                "content" => $mensaje
+            ]
+        ],
+        "temperature" => 0.1
+    ];
+
+    $ch = curl_init();
+
+    curl_setopt($ch, CURLOPT_URL, $url);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        "Content-Type: application/json",
+        "Authorization: Bearer " . $apiKey,
+        "HTTP-Referer: " . $referer,
+        "X-Title: " . $titulo
+    ]);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+
+    $response = curl_exec($ch);
+
+    if (curl_errno($ch)) {
+        return json_encode([
+            "error" => curl_error($ch)
+        ]);
+    }
+
+    curl_close($ch);
+
+    $json = json_decode($response, true);
+
+    if (isset($json['error'])) {
+        return json_encode([
+            "error" => $json['error']
+        ]);
+    }
+
+    if (!isset($json['choices'][0]['message']['content'])) {
+        return json_encode([
+            "error" => "Respuesta invalida API",
+            "response" => $json
+        ]);
+    }
+
+    return trim($json['choices'][0]['message']['content']);
+}

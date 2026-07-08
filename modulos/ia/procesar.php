@@ -24,10 +24,20 @@ if (!isset($_SESSION['codigo'])) {
 */
 
 $prompt = $_POST['prompt'] ?? '';
+$routerContexto = $_POST['router_contexto'] ?? '';
 
 if ($prompt == '') {
 
     die("Prompt vacío");
+}
+
+if ($routerContexto !== '') {
+
+    $prompt = "CONTEXTO DEL ROUTER LEIDO POR EL MODULO DE DIAGNOSTICO:\n"
+        . $routerContexto
+        . "\n\nSOLICITUD DEL USUARIO:\n"
+        . $prompt
+        . "\n\nUsa el contexto para elegir parametros acordes al router. Responde solo con el JSON esperado por la aplicacion.";
 }
 
 /*
@@ -547,7 +557,24 @@ switch ($_POST['tipo']) {
 
 ob_start();
 
-require_once '../../aplicar.php';
+$rutasAplicar = [
+    __DIR__ . '/../../aplicar.php',
+    __DIR__ . '/../../../aplicar.php',
+];
+
+$aplicarEncontrado = false;
+
+foreach ($rutasAplicar as $rutaAplicar) {
+    if (file_exists($rutaAplicar)) {
+        require_once $rutaAplicar;
+        $aplicarEncontrado = true;
+        break;
+    }
+}
+
+if (!$aplicarEncontrado) {
+    echo '<h3>No se encontro aplicar.php</h3>';
+}
 
 $contenido = ob_get_clean();
 
@@ -581,6 +608,12 @@ $contenido = ob_get_clean();
         <div class="card-body">
 
             <h2>Resultado generado por IA</h2>
+
+            <?php if ($routerContexto !== '') { ?>
+                <div class="alert alert-info mt-3">
+                    La solicitud fue generada usando el contexto leido desde el modulo de diagnostico.
+                </div>
+            <?php } ?>
 
             <hr>
 
