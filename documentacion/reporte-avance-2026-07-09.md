@@ -86,6 +86,10 @@ php -l modulos/ia/openai.php
 
 El modulo de diagnostico ya obtiene mas informacion del router y el flujo con IA cuenta con mejor contexto para proponer acciones de configuracion. La interfaz tambien quedo mas ordenada, mostrando la informacion por secciones en ventanas emergentes.
 
-## Siguiente paso sugerido
+## Pendiente
 
 Realizar una prueba conectando el modulo a un router real con usuario de solo lectura, revisar que todas las secciones carguen correctamente y generar una propuesta de IA para validar que el script sugerido tome en cuenta el estado actual del equipo.
+Mejorar el resumen del contexto para reducir informacion innecesaria.
+Agregar validaciones visuales para advertir cuando falte informacion importante.
+Guardar historial de diagnosticos y propuestas generadas.
+Definir un proceso seguro para aprobar o copiar scripts, sin ejecutarlos automaticamente.
