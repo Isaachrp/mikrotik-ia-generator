@@ -51,8 +51,15 @@ $recurso = consultarRouter($API, '/system/resource/print');
 $interfaces = consultarRouter($API, '/interface/print');
 $direcciones = consultarRouter($API, '/ip/address/print');
 $rutas = consultarRouter($API, '/ip/route/print');
+$dns = consultarRouter($API, '/ip/dns/print');
 $firewall = consultarRouter($API, '/ip/firewall/filter/print');
 $nat = consultarRouter($API, '/ip/firewall/nat/print');
+$mangle = consultarRouter($API, '/ip/firewall/mangle/print');
+$tablasRuteo = consultarRouter($API, '/routing/table/print');
+$servicios = consultarRouter($API, '/ip/service/print');
+$paquetes = consultarRouter($API, '/system/package/print');
+$bridges = consultarRouter($API, '/interface/bridge/print');
+$bridgePorts = consultarRouter($API, '/interface/bridge/port/print');
 $dhcp = consultarRouter($API, '/ip/dhcp-server/print');
 $dhcpRedes = consultarRouter($API, '/ip/dhcp-server/network/print');
 $pools = consultarRouter($API, '/ip/pool/print');
@@ -60,6 +67,8 @@ $hotspot = consultarRouter($API, '/ip/hotspot/print');
 $hotspotPerfiles = consultarRouter($API, '/ip/hotspot/profile/print');
 $hotspotUsuarios = consultarRouter($API, '/ip/hotspot/user/print');
 $colasSimples = consultarRouter($API, '/queue/simple/print');
+$pppSecrets = consultarRouter($API, '/ppp/secret/print');
+$vecinos = consultarRouter($API, '/ip/neighbor/print');
 
 $API->disconnect();
 
@@ -72,8 +81,15 @@ $_SESSION['diagnostico_router'] = [
     'interfaces' => $interfaces,
     'direcciones' => $direcciones,
     'rutas' => $rutas,
+    'dns' => $dns,
     'firewall' => $firewall,
     'nat' => $nat,
+    'mangle' => $mangle,
+    'tablas_ruteo' => $tablasRuteo,
+    'servicios' => $servicios,
+    'paquetes' => $paquetes,
+    'bridges' => $bridges,
+    'bridge_ports' => $bridgePorts,
     'dhcp' => $dhcp,
     'dhcp_redes' => $dhcpRedes,
     'pools' => $pools,
@@ -81,6 +97,8 @@ $_SESSION['diagnostico_router'] = [
     'hotspot_perfiles' => $hotspotPerfiles,
     'hotspot_usuarios' => $hotspotUsuarios,
     'colas_simples' => $colasSimples,
+    'ppp_secrets' => $pppSecrets,
+    'vecinos' => $vecinos,
 ];
 
 header('Location: leer_router.php');

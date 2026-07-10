@@ -40,55 +40,64 @@ function valorRegistro($registro, $campo)
 function renderTabla($id, $titulo, $datos, $columnas)
 {
     ?>
-    <div class="accordion-item">
-        <h2 class="accordion-header" id="heading-<?php echo htmlspecialchars($id); ?>">
-            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-<?php echo htmlspecialchars($id); ?>">
-                <?php echo htmlspecialchars($titulo); ?> (<?php echo contarRegistros($datos); ?>)
-            </button>
-        </h2>
+    <div class="col-6 col-md-3">
+        <button
+            class="border rounded p-3 bg-white text-center h-100 w-100 btn btn-link text-decoration-none text-dark"
+            type="button"
+            data-bs-toggle="modal"
+            data-bs-target="#modal-<?php echo htmlspecialchars($id); ?>"
+        >
+            <div class="h4 mb-0"><?php echo contarRegistros($datos); ?></div>
+            <div class="small text-muted"><?php echo htmlspecialchars($titulo); ?></div>
+        </button>
+    </div>
 
-        <div id="collapse-<?php echo htmlspecialchars($id); ?>" class="accordion-collapse collapse" data-bs-parent="#diagnosticoAccordion">
-            <div class="accordion-body">
-                <?php if (empty($datos)) { ?>
-                    <div class="text-muted">No se encontraron registros.</div>
-                <?php } else { ?>
-                    <div class="table-responsive">
-                        <table class="table table-sm table-bordered align-middle">
-                            <thead class="table-light">
-                                <tr>
-                                    <?php foreach ($columnas as $campo => $etiqueta) { ?>
-                                        <th><?php echo htmlspecialchars($etiqueta); ?></th>
-                                    <?php } ?>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php foreach ($datos as $registro) { ?>
+    <div class="modal fade" id="modal-<?php echo htmlspecialchars($id); ?>" tabindex="-1" aria-labelledby="modal-title-<?php echo htmlspecialchars($id); ?>" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div>
+                        <h5 class="modal-title" id="modal-title-<?php echo htmlspecialchars($id); ?>"><?php echo htmlspecialchars($titulo); ?></h5>
+                        <div class="small text-muted"><?php echo contarRegistros($datos); ?> registros encontrados</div>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+
+                <div class="modal-body">
+                    <?php if (empty($datos)) { ?>
+                        <div class="text-muted">No se encontraron registros.</div>
+                    <?php } else { ?>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-bordered align-middle mb-0">
+                                <thead class="table-light">
                                     <tr>
                                         <?php foreach ($columnas as $campo => $etiqueta) { ?>
-                                            <td><?php echo valorRegistro($registro, $campo); ?></td>
+                                            <th><?php echo htmlspecialchars($etiqueta); ?></th>
                                         <?php } ?>
                                     </tr>
-                                <?php } ?>
-                            </tbody>
-                        </table>
-                    </div>
-                <?php } ?>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($datos as $registro) { ?>
+                                        <tr>
+                                            <?php foreach ($columnas as $campo => $etiqueta) { ?>
+                                                <td><?php echo valorRegistro($registro, $campo); ?></td>
+                                            <?php } ?>
+                                        </tr>
+                                    <?php } ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    <?php } ?>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                </div>
             </div>
         </div>
     </div>
     <?php
 }
-
-$resumen = [
-    'Interfaces' => contarRegistros($router['interfaces'] ?? []),
-    'Direcciones IP' => contarRegistros($router['direcciones'] ?? []),
-    'Rutas' => contarRegistros($router['rutas'] ?? []),
-    'Firewall' => contarRegistros($router['firewall'] ?? []),
-    'NAT' => contarRegistros($router['nat'] ?? []),
-    'DHCP' => contarRegistros($router['dhcp'] ?? []),
-    'Hotspot' => contarRegistros($router['hotspot'] ?? []),
-    'Colas simples' => contarRegistros($router['colas_simples'] ?? []),
-];
 
 ?>
 
@@ -162,22 +171,9 @@ $resumen = [
 
                     </div>
 
-                    <h5 class="mb-3">Resumen de lectura</h5>
-
-                    <div class="row g-3 mb-4">
-                        <?php foreach ($resumen as $titulo => $total) { ?>
-                            <div class="col-6 col-md-3">
-                                <div class="border rounded p-3 bg-white text-center h-100">
-                                    <div class="h4 mb-0"><?php echo (int) $total; ?></div>
-                                    <div class="small text-muted"><?php echo htmlspecialchars($titulo); ?></div>
-                                </div>
-                            </div>
-                        <?php } ?>
-                    </div>
-
                     <h5 class="mb-3">Detalle por seccion</h5>
 
-                    <div class="accordion" id="diagnosticoAccordion">
+                    <div class="row g-3" id="detalleSecciones">
 
                         <?php
                         renderTabla('interfaces', 'Interfaces', $router['interfaces'] ?? [], [
@@ -202,8 +198,26 @@ $resumen = [
                             'gateway' => 'Gateway',
                             'distance' => 'Distancia',
                             'routing-table' => 'Tabla',
+                            'scope' => 'Scope',
+                            'target-scope' => 'Target scope',
+                            'check-gateway' => 'Check',
+                            'active' => 'Activa',
                             'disabled' => 'Deshabilitada',
                             'comment' => 'Comentario',
+                        ]);
+
+                        renderTabla('tablas-ruteo', 'Tablas de ruteo RouterOS v7', $router['tablas_ruteo'] ?? [], [
+                            'name' => 'Nombre',
+                            'fib' => 'FIB',
+                            'disabled' => 'Deshabilitada',
+                            'comment' => 'Comentario',
+                        ]);
+
+                        renderTabla('dns', 'DNS', $router['dns'] ?? [], [
+                            'servers' => 'Servidores',
+                            'dynamic-servers' => 'Dinamicos',
+                            'allow-remote-requests' => 'Remote requests',
+                            'cache-size' => 'Cache',
                         ]);
 
                         renderTabla('firewall', 'Firewall filter', $router['firewall'] ?? [], [
@@ -219,10 +233,57 @@ $resumen = [
                         renderTabla('nat', 'Firewall NAT', $router['nat'] ?? [], [
                             'chain' => 'Chain',
                             'action' => 'Accion',
+                            'protocol' => 'Protocolo',
                             'src-address' => 'Origen',
                             'dst-address' => 'Destino',
+                            'in-interface' => 'Entrada',
                             'out-interface' => 'Salida',
+                            'to-addresses' => 'To addresses',
                             'disabled' => 'Deshabilitada',
+                            'comment' => 'Comentario',
+                        ]);
+
+                        renderTabla('mangle', 'Firewall mangle', $router['mangle'] ?? [], [
+                            'chain' => 'Chain',
+                            'action' => 'Accion',
+                            'in-interface' => 'Entrada',
+                            'out-interface' => 'Salida',
+                            'connection-mark' => 'Conn mark',
+                            'new-connection-mark' => 'New conn mark',
+                            'routing-mark' => 'Routing mark',
+                            'new-routing-mark' => 'New routing mark',
+                            'per-connection-classifier' => 'PCC',
+                            'nth' => 'NTH',
+                            'disabled' => 'Deshabilitada',
+                            'comment' => 'Comentario',
+                        ]);
+
+                        renderTabla('servicios', 'Servicios del router', $router['servicios'] ?? [], [
+                            'name' => 'Nombre',
+                            'port' => 'Puerto',
+                            'address' => 'Address',
+                            'disabled' => 'Deshabilitado',
+                        ]);
+
+                        renderTabla('paquetes', 'Paquetes RouterOS', $router['paquetes'] ?? [], [
+                            'name' => 'Nombre',
+                            'version' => 'Version',
+                            'disabled' => 'Deshabilitado',
+                        ]);
+
+                        renderTabla('bridges', 'Bridge interfaces', $router['bridges'] ?? [], [
+                            'name' => 'Nombre',
+                            'protocol-mode' => 'Protocolo',
+                            'vlan-filtering' => 'VLAN filtering',
+                            'disabled' => 'Deshabilitado',
+                            'comment' => 'Comentario',
+                        ]);
+
+                        renderTabla('bridge-ports', 'Bridge ports', $router['bridge_ports'] ?? [], [
+                            'interface' => 'Interfaz',
+                            'bridge' => 'Bridge',
+                            'pvid' => 'PVID',
+                            'disabled' => 'Deshabilitado',
                             'comment' => 'Comentario',
                         ]);
 
@@ -276,18 +337,33 @@ $resumen = [
                             'name' => 'Nombre',
                             'target' => 'Target',
                             'max-limit' => 'Max limit',
+                            'limit-at' => 'Limit at',
+                            'parent' => 'Parent',
                             'disabled' => 'Deshabilitada',
                             'comment' => 'Comentario',
+                        ]);
+
+                        renderTabla('ppp-secrets', 'PPP secrets', $router['ppp_secrets'] ?? [], [
+                            'name' => 'Nombre',
+                            'service' => 'Servicio',
+                            'profile' => 'Perfil',
+                            'local-address' => 'Local',
+                            'remote-address' => 'Remota',
+                            'disabled' => 'Deshabilitado',
+                            'comment' => 'Comentario',
+                        ]);
+
+                        renderTabla('vecinos', 'Vecinos IP', $router['vecinos'] ?? [], [
+                            'interface' => 'Interfaz',
+                            'address' => 'Address',
+                            'mac-address' => 'MAC',
+                            'identity' => 'Identidad',
+                            'platform' => 'Plataforma',
+                            'version' => 'Version',
                         ]);
                         ?>
 
                     </div>
-
-                    <h5 class="mt-4">Datos preparados para IA</h5>
-
-                    <pre class="bg-dark text-light p-3 rounded small"><?php
-echo htmlspecialchars($contextoIA);
-                    ?></pre>
 
                     <div class="border rounded p-3 bg-white mt-4">
 
