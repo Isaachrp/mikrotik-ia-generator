@@ -19,6 +19,8 @@ $router = $_SESSION['diagnostico_router'];
 $identidad = $router['identidad'][0] ?? [];
 $recurso = $router['recurso'][0] ?? [];
 $contextoIA = prepararContextoRouter($router);
+$validacionesRouter = obtenerValidacionesRouter($router, $identidad, $recurso);
+$validacionesSeccion = validacionesPorSeccion($validacionesRouter);
 
 function mostrarValor($valor, $defecto = 'No disponible')
 {
@@ -37,18 +39,154 @@ function valorRegistro($registro, $campo)
     return mostrarValor($registro[$campo] ?? '');
 }
 
-function renderTabla($id, $titulo, $datos, $columnas)
+function tieneValor($valor)
 {
+    return trim((string) $valor) !== '';
+}
+
+function obtenerValidacionesRouter($router, $identidad, $recurso)
+{
+    $dns = $router['dns'][0] ?? [];
+    $advertencias = [];
+
+    if (!tieneValor($identidad['name'] ?? '')) {
+        $advertencias[] = [
+            'nivel' => 'warning',
+            'seccion' => 'Identidad',
+            'mensaje' => 'No se pudo leer la identidad del router.',
+        ];
+    }
+
+    if (!tieneValor($recurso['version'] ?? '')) {
+        $advertencias[] = [
+            'nivel' => 'warning',
+            'seccion' => 'RouterOS',
+            'mensaje' => 'No se pudo detectar la version de RouterOS.',
+        ];
+    }
+
+    if (contarRegistros($router['interfaces'] ?? []) === 0) {
+        $advertencias[] = [
+            'nivel' => 'danger',
+            'seccion' => 'Interfaces',
+            'mensaje' => 'No se encontraron interfaces. La IA no podra identificar WAN, LAN o bridges con seguridad.',
+        ];
+    }
+
+    if (contarRegistros($router['direcciones'] ?? []) === 0) {
+        $advertencias[] = [
+            'nivel' => 'danger',
+            'seccion' => 'Direcciones IP',
+            'mensaje' => 'No se encontraron direcciones IP. Las propuestas para LAN, clientes, Hotspot o rutas pueden quedar incompletas.',
+        ];
+    }
+
+    if (contarRegistros($router['rutas'] ?? []) === 0) {
+        $advertencias[] = [
+            'nivel' => 'warning',
+            'seccion' => 'Rutas',
+            'mensaje' => 'No se encontraron rutas. Para balanceos ECMP, PCC, PBR o NTH se necesita revisar gateways y rutas existentes.',
+        ];
+    }
+
+    if (empty($dns) || (!tieneValor($dns['servers'] ?? '') && !tieneValor($dns['dynamic-servers'] ?? ''))) {
+        $advertencias[] = [
+            'nivel' => 'warning',
+            'seccion' => 'DNS',
+            'mensaje' => 'No se detectaron servidores DNS. Esto es importante para configuraciones recursivas y Hotspot.',
+        ];
+    }
+
+    if (contarRegistros($router['nat'] ?? []) === 0) {
+        $advertencias[] = [
+            'nivel' => 'warning',
+            'seccion' => 'NAT',
+            'mensaje' => 'No se encontraron reglas NAT. Es posible que falte masquerade para salida a Internet.',
+        ];
+    }
+
+    if (contarRegistros($router['servicios'] ?? []) === 0) {
+        $advertencias[] = [
+            'nivel' => 'info',
+            'seccion' => 'Servicios',
+            'mensaje' => 'No se pudo leer la lista de servicios del router. Esto limita la revision de accesos administrativos.',
+        ];
+    }
+
+    return $advertencias;
+}
+
+function validacionesPorSeccion($validaciones)
+{
+    $porSeccion = [];
+
+    foreach ($validaciones as $validacion) {
+        $porSeccion[$validacion['seccion']][] = $validacion;
+    }
+
+    return $porSeccion;
+}
+
+function renderAlertasValidacion($validaciones)
+{
+    if (empty($validaciones)) {
+        ?>
+        <div class="alert alert-success mb-4">
+            No se detectaron faltantes importantes en la lectura inicial del router.
+        </div>
+        <?php
+        return;
+    }
+
+    ?>
+    <div class="alert alert-warning mb-4">
+        <h6 class="alert-heading">Informacion importante pendiente de revisar</h6>
+        <p class="mb-2">
+            El diagnostico se completo, pero hay datos que pueden afectar la precision de las propuestas generadas por IA.
+        </p>
+        <ul class="mb-0">
+            <?php foreach ($validaciones as $validacion) { ?>
+                <li>
+                    <strong><?php echo htmlspecialchars($validacion['seccion']); ?>:</strong>
+                    <?php echo htmlspecialchars($validacion['mensaje']); ?>
+                </li>
+            <?php } ?>
+        </ul>
+    </div>
+    <?php
+}
+
+function tieneValidacionCritica($validaciones)
+{
+    foreach ($validaciones as $validacion) {
+        if (($validacion['nivel'] ?? '') === 'danger') {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+function renderTabla($id, $titulo, $datos, $columnas, $validaciones = [])
+{
+    $nivel = $validaciones[0]['nivel'] ?? '';
+    $claseBorde = $nivel === 'danger' ? 'border-danger' : ($nivel === 'warning' ? 'border-warning' : '');
+    $badge = $nivel === 'danger' ? 'Falta dato critico' : ($nivel === 'warning' ? 'Revisar' : ($nivel === 'info' ? 'Aviso' : ''));
+    $badgeClase = $nivel === 'danger' ? 'text-bg-danger' : ($nivel === 'warning' ? 'text-bg-warning' : 'text-bg-info');
+
     ?>
     <div class="col-6 col-md-3">
         <button
-            class="border rounded p-3 bg-white text-center h-100 w-100 btn btn-link text-decoration-none text-dark"
+            class="border rounded p-3 bg-white text-center h-100 w-100 btn btn-link text-decoration-none text-dark <?php echo htmlspecialchars($claseBorde); ?>"
             type="button"
             data-bs-toggle="modal"
             data-bs-target="#modal-<?php echo htmlspecialchars($id); ?>"
         >
             <div class="h4 mb-0"><?php echo contarRegistros($datos); ?></div>
             <div class="small text-muted"><?php echo htmlspecialchars($titulo); ?></div>
+            <?php if ($badge !== '') { ?>
+                <span class="badge <?php echo htmlspecialchars($badgeClase); ?> mt-2"><?php echo htmlspecialchars($badge); ?></span>
+            <?php } ?>
         </button>
     </div>
 
@@ -64,6 +202,17 @@ function renderTabla($id, $titulo, $datos, $columnas)
                 </div>
 
                 <div class="modal-body">
+                    <?php if (!empty($validaciones)) { ?>
+                        <div class="alert alert-warning">
+                            <h6 class="alert-heading">Puntos a revisar</h6>
+                            <ul class="mb-0">
+                                <?php foreach ($validaciones as $validacion) { ?>
+                                    <li><?php echo htmlspecialchars($validacion['mensaje']); ?></li>
+                                <?php } ?>
+                            </ul>
+                        </div>
+                    <?php } ?>
+
                     <?php if (empty($datos)) { ?>
                         <div class="text-muted">No se encontraron registros.</div>
                     <?php } else { ?>
@@ -171,6 +320,8 @@ function renderTabla($id, $titulo, $datos, $columnas)
 
                     </div>
 
+                    <?php renderAlertasValidacion($validacionesRouter); ?>
+
                     <h5 class="mb-3">Detalle por seccion</h5>
 
                     <div class="row g-3" id="detalleSecciones">
@@ -183,7 +334,7 @@ function renderTabla($id, $titulo, $datos, $columnas)
                             'running' => 'Running',
                             'disabled' => 'Deshabilitada',
                             'comment' => 'Comentario',
-                        ]);
+                        ], $validacionesSeccion['Interfaces'] ?? []);
 
                         renderTabla('direcciones', 'Direcciones IP', $router['direcciones'] ?? [], [
                             'address' => 'Direccion',
@@ -191,7 +342,7 @@ function renderTabla($id, $titulo, $datos, $columnas)
                             'interface' => 'Interfaz',
                             'disabled' => 'Deshabilitada',
                             'comment' => 'Comentario',
-                        ]);
+                        ], $validacionesSeccion['Direcciones IP'] ?? []);
 
                         renderTabla('rutas', 'Rutas', $router['rutas'] ?? [], [
                             'dst-address' => 'Destino',
@@ -204,7 +355,7 @@ function renderTabla($id, $titulo, $datos, $columnas)
                             'active' => 'Activa',
                             'disabled' => 'Deshabilitada',
                             'comment' => 'Comentario',
-                        ]);
+                        ], $validacionesSeccion['Rutas'] ?? []);
 
                         renderTabla('tablas-ruteo', 'Tablas de ruteo RouterOS v7', $router['tablas_ruteo'] ?? [], [
                             'name' => 'Nombre',
@@ -218,7 +369,7 @@ function renderTabla($id, $titulo, $datos, $columnas)
                             'dynamic-servers' => 'Dinamicos',
                             'allow-remote-requests' => 'Remote requests',
                             'cache-size' => 'Cache',
-                        ]);
+                        ], $validacionesSeccion['DNS'] ?? []);
 
                         renderTabla('firewall', 'Firewall filter', $router['firewall'] ?? [], [
                             'chain' => 'Chain',
@@ -241,7 +392,7 @@ function renderTabla($id, $titulo, $datos, $columnas)
                             'to-addresses' => 'To addresses',
                             'disabled' => 'Deshabilitada',
                             'comment' => 'Comentario',
-                        ]);
+                        ], $validacionesSeccion['NAT'] ?? []);
 
                         renderTabla('mangle', 'Firewall mangle', $router['mangle'] ?? [], [
                             'chain' => 'Chain',
@@ -263,7 +414,7 @@ function renderTabla($id, $titulo, $datos, $columnas)
                             'port' => 'Puerto',
                             'address' => 'Address',
                             'disabled' => 'Deshabilitado',
-                        ]);
+                        ], $validacionesSeccion['Servicios'] ?? []);
 
                         renderTabla('paquetes', 'Paquetes RouterOS', $router['paquetes'] ?? [], [
                             'name' => 'Nombre',
@@ -372,6 +523,12 @@ function renderTabla($id, $titulo, $datos, $columnas)
                         <p class="text-muted">
                             La IA recibira el diagnostico anterior como contexto para generar una propuesta acorde a este router.
                         </p>
+
+                        <?php if (tieneValidacionCritica($validacionesRouter)) { ?>
+                            <div class="alert alert-danger">
+                                Faltan datos criticos del router. Puedes generar una propuesta, pero revisa las advertencias porque el resultado podria requerir ajustes manuales.
+                            </div>
+                        <?php } ?>
 
                         <form method="POST" action="../ia/proponer.php">
 
